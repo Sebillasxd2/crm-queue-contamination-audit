@@ -1,0 +1,20 @@
+{
+  "name": "crm-queue-contamination-audit",
+  "version": "0.1.0",
+  "description": "Read-only audit of per-rep dialer queues in GoHighLevel: wrong owners, departed reps, other clients' leads, duplicate queue tags, possible ghosts. Refuses to call a queue clean without a positive control.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json",
+    "demo": "node src/cli.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "tags": [
+    "dialer-queue-avery",
+    "dialer-queue-jordan",
+    "dialer-queue-casey",
+    "booked",
+    "audit-control",
+    "newsletter"
+  ],
+  "workflows": [
+    {
+      "id": "wf_demo_0001",
+      "name": "Dialer Queue - Avery",
+      "status": "published"
+    },
+    {
+      "id": "wf_demo_0002",
+      "name": "Dialer Queue - Jordan",
+      "status": "draft"
+    },
+    {
+      "id": "wf_demo_0003",
+      "name": "Dialer Queue - Jordan",
+      "status": "published"
+    },
+    {
+      "id": "wf_demo_0004",
+      "name": "Dialer Queue - Casey",
+      "status": "published"
+    }
+  ],
+  "contacts": [
+    {
+      "id": "ct_a01",
+      "tags": [
+        "dialer-queue-avery"
+      ],
+      "assignedTo": "usr_demo_0001",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_a02",
+      "tags": [
+        "dialer-queue-avery"
+      ],
+      "assignedTo": "usr_demo_0001",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_a03",
+      "tags": [
+        "dialer-queue-avery"
+      ],
+      "assignedTo": "usr_demo_0001",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_a04",
+      "tags": [
+        "dialer-queue-avery"
+      ],
+      "assignedTo": "usr_demo_0001",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_a05",
+      "tags": [
+        "dialer-queue-avery"
+      ],
+      "assignedTo": "usr_demo_0001",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_a06",
+      "tags": [
+        "dialer-queue-avery"
+      ],
+      "assignedTo": "usr_demo_0003",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_a07",
+      "tags": [
+        "dialer-queue-avery"
+      ],
+      "assignedTo": "usr_demo_0003",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_a08",
+      "tags": [
+        "dialer-queue-avery"
+      ],
+      "assignedTo": "usr_demo_0001",
+      "clientKey": "prairie"
+    },
+    {
+      "id": "ct_a09",
+      "tags": [
+        "dialer-queue-avery",
+        "dialer-queue-jordan"
+      ],
+      "assignedTo": "usr_demo_0001",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_a10",
+      "tags": [
+        "dialer-queue-avery"
+      ],
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_j01",
+      "tags": [
+        "dialer-queue-jordan"
+      ],
+      "assignedTo": "usr_demo_0002",
+      "clientKey": "prairie"
+    },
+    {
+      "id": "ct_j02",
+      "tags": [
+        "dialer-queue-jordan"
+      ],
+      "assignedTo": "usr_demo_0002",
+      "clientKey": "prairie"
+    },
+    {
+      "id": "ct_j03",
+      "tags": [
+        "dialer-queue-jordan"
+      ],
+      "assignedTo": "usr_demo_0002",
+      "clientKey": "prairie"
+    },
+    {
+      "id": "ct_j04",
+      "tags": [
+        "dialer-queue-jordan"
+      ],
+      "assignedTo": "usr_demo_0002",
+      "clientKey": "prairie"
+    },
+    {
+      "id": "ct_j05",
+      "tags": [
+        "dialer-queue-jordan"
+      ],
+      "assignedTo": "usr_demo_0001",
+      "clientKey": "prairie"
+    },
+    {
+      "id": "ct_g01",
+      "tags": [],
+      "assignedTo": "usr_demo_0002",
+      "clientKey": "prairie"
+    },
+    {
+      "id": "ct_g02",
+      "tags": [
+        "booked"
+      ],
+      "assignedTo": "usr_demo_0002",
+      "clientKey": "prairie"
+    },
+    {
+      "id": "ct_g03",
+      "tags": [
+        "newsletter"
+      ],
+      "assignedTo": "usr_demo_0001",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_c01",
+      "tags": [
+        "dialer-queue-casey"
+      ],
+      "assignedTo": "usr_demo_0003",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_c02",
+      "tags": [
+        "dialer-queue-casey"
+      ],
+      "assignedTo": "usr_demo_0003",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_c03",
+      "tags": [
+        "dialer-queue-casey"
+      ],
+      "assignedTo": "usr_demo_0003",
+      "clientKey": "riverbend"
+    },
+    {
+      "id": "ct_x01",
+      "tags": [
+        "audit-control"
+      ]
+    }
+  ]
+}

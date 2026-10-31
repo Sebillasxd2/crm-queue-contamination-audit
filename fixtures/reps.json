@@ -1,0 +1,38 @@
+[
+  {
+    "id": "rep_avery",
+    "name": "Avery Sample",
+    "ghlUserId": "usr_demo_0001",
+    "clientKey": "riverbend",
+    "queueTag": "dialer-queue-avery",
+    "workflowName": "Dialer Queue - Avery",
+    "active": true
+  },
+  {
+    "id": "rep_jordan",
+    "name": "Jordan Sample",
+    "ghlUserId": "usr_demo_0002",
+    "clientKey": "prairie",
+    "queueTag": "dialer-queue-jordan",
+    "workflowName": "Dialer Queue - Jordan",
+    "active": true
+  },
+  {
+    "id": "rep_casey",
+    "name": "Casey Sample",
+    "ghlUserId": "usr_demo_0003",
+    "clientKey": "riverbend",
+    "queueTag": "dialer-queue-casey",
+    "workflowName": "Dialer Queue - Casey",
+    "active": false
+  },
+  {
+    "id": "rep_riley",
+    "name": "Riley Sample",
+    "ghlUserId": "usr_demo_0004",
+    "clientKey": "plains",
+    "queueTag": "dialer-queue-riley",
+    "workflowName": "Dialer Queue - Riley",
+    "active": true
+  }
+]
