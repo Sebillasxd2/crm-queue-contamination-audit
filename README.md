@@ -13,16 +13,16 @@ Each rep dials from a queue: contacts carrying the rep's queue tag, assigned to 
 3. **People leave; their contacts stay.** A departed rep's contacts keep their owner and tag, show up in colleagues' queues, and the departed rep's workflow stays published. The audit flags contacts owned by an inactive rep, an inactive rep who still has a queue, and a still-published workflow.
 4. **Leads cross clients.** When a rep moves to another client, or two queues share a load, a lead loaded for one client ends up in a queue dialing for another. The audit compares the client key stored on the contact with the rep's current client.
 5. **A contact can be in two queues.** Two queue tags on one contact put it in two reps' workflows.
-6. **Ghosts are invisible to a tag search.** Removing a tag does not take a contact out of a workflow. The public API does not expose enrollment, so the audit reports owned contacts with no queue tag as *possible* ghosts, for a person to check in the call queue.
+6. **Ghosts are invisible to a tag search.** Removing a tag does not take a contact out of a workflow. The public API does not expose enrollment, so the audit reports contacts owned by an active rep with no queue tag as *possible* ghosts, for a person to check in the call queue. An inactive rep's owned contacts are not scanned for ghosts; their queue is reported as offboarding instead.
 7. **Workflow names are not unique.** A rep's workflow is looked up by name; two workflows with that name is an error, not a guess, and a draft one is flagged because tagged contacts never reach the call queue.
 
 ## The solution
 
-`audit()` in [src/audit.ts](src/audit.ts), against a three-method read-only port ([src/model.ts](src/model.ts)): list tags, list workflows, search contacts by tag or owner. Searches page by cursor until a page comes back empty, never stopping on page length, and stop with an error if the cursor repeats.
+`audit()` in [src/audit.ts](src/audit.ts), against a three-method read-only port ([src/model.ts](src/model.ts)): list tags, list workflows, search contacts by tag or owner. Searches page by cursor until a page comes back empty, never stopping on page length. Anything else that would stop the paging is a broken read, reported as a `control` ERROR with the rep unverified, never as a shorter list: a page with contacts but no cursor, a cursor that returns to a position already read, a page that adds no new contact, or more than 1,000 pages. A tag search that returns contacts without the tag it asked for is reported the same way, since that list is not the queue.
 
 | check | severity | means |
 |---|---|---|
-| `control` | ERROR / WARN | the control search found nobody, the owner search missed contacts it should return or had nothing to be checked against, a queue tag does not exist, the roster is empty, or no control is configured |
+| `control` | ERROR / WARN | the control tag does not exist or its search found nobody, a search could not be read to the end or over-matched, the owner search missed contacts it should return or had nothing to be checked against, a queue tag does not exist, the roster is empty, or no control is configured |
 | `workflow` | ERROR / WARN | the rep's workflow is missing, ambiguous, or not published |
 | `inactive-owner` | ERROR | a queued contact is owned by a rep who left |
 | `wrong-owner` | ERROR | a queued contact is owned by another rep or an unknown user |
@@ -30,7 +30,7 @@ Each rep dials from a queue: contacts carrying the rep's queue tag, assigned to 
 | `multiple-queues` | ERROR | a contact with more than one queue tag, reported once per contact |
 | `offboarding` | ERROR / WARN | an inactive rep still has a queue, or a published workflow |
 | `no-owner` | WARN | queued with no owner: invisible to a restricted rep |
-| `possible-ghost` | WARN | owned, no queue tag, not protected (`booked`, `customer`) |
+| `possible-ghost` | WARN | owned by an active rep, no queue tag, not protected (`booked`, `customer`) |
 
 Status: `clean`, `findings`, or `unverified`. `unverified` wins over `findings`: what was found is real, but the list may be incomplete. A failed control or an empty roster is always `unverified`.
 
@@ -73,7 +73,8 @@ The fixture ([fixtures/location.json](fixtures/location.json), [fixtures/reps.js
 
 - **Enrollment.** Today ghosts are reported as possible: the public API does not say which workflow a contact is enrolled in. To confirm in the call queue itself.
 - **Client key.** Today it is read from a contact custom field (`CLIENT_FIELD_ID`) that the loader fills. To confirm: that your loads write it; contacts without it are not checked for `other-client`.
-- **Search filter shape.** Today the adapter sends `{ field: "tags", operator: "contains", value }` and `{ field: "assignedTo", operator: "eq", value }`, as I read the public Search Contacts docs. The control tag tells you if the tag shape is wrong for your account, and the owner check tells you if the owner shape is.
+- **Search filter shape.** Today the adapter sends `{ field: "tags", operator: "contains", value }` and `{ field: "assignedTo", operator: "eq", value }`, as I read the public Search Contacts docs. The control tag tells you if the tag shape finds nothing for your account, the tag check on every result tells you if it over-matches, and the owner check tells you if the owner shape is wrong.
+- **The cursor field.** Today the adapter reads the next-page cursor from the last contact's `searchAfter`. No control covers that name; if your account returns the cursor elsewhere, every non-empty search is reported as a broken read, so the audit fails closed rather than calling a truncated queue clean. To confirm: where your search response carries the cursor.
 - **Roster.** Today who is active comes from the local `reps` table, not from the CRM's user list. To confirm it is kept current when people leave.
 
 ---
