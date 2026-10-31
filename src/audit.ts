@@ -59,6 +59,12 @@ async function searchAll(port: AuditPort, filter: SearchFilter): Promise<Contact
  * tag that does not exist in the location, or a workflow name that resolves to
  * nothing, makes the search meaningless, so that rep is reported as unverified.
  * Zero found by a query that could not have matched is not zero contamination.
+ *
+ * Each search shape has its own control. The tag search is checked against the
+ * control tag; the owner search, which the ghost check depends on, is checked
+ * against the queued contacts the tag search already showed as assigned to the
+ * rep: every one of them must come back. An empty roster reads nothing, so it is
+ * never clean either.
  */
 export async function audit(port: AuditPort, reps: Rep[], options: AuditOptions = DEFAULT_OPTIONS): Promise<AuditReport> {
   const findings: Finding[] = [];
@@ -73,10 +79,18 @@ export async function audit(port: AuditPort, reps: Rep[], options: AuditOptions 
     controlled = true;
   }
 
+  if (reps.length === 0) {
+    add({ check: "control", severity: "ERROR", repId: "*", message: "no reps to audit: nothing was read, so nothing is proven clean" });
+  }
+
   const tags = new Set(await port.listTags());
   const workflows = await port.listWorkflows();
   const byUser = new Map(reps.map((r) => [r.ghlUserId, r]));
-  const summaries: RepSummary[] = [];
+  const audited = new Map<string, { verified: boolean; queueSize: number }>();
+  const multiQueue = new Set<string>();
+  // Reps whose owner search had nothing of their own to be checked against.
+  const ownerUnchecked: Rep[] = [];
+  let ownerChecked = false;
 
   for (const rep of reps) {
     let verified = true;
@@ -117,15 +131,28 @@ export async function audit(port: AuditPort, reps: Rep[], options: AuditOptions 
         add({ check: "other-client", severity: "ERROR", repId: rep.id, contactId: contact.id, message: `a ${contact.clientKey} lead in a queue dialing for ${rep.clientKey}` });
       }
       const queueTags = contact.tags.filter((t) => t.startsWith(options.queueTagPrefix));
-      if (queueTags.length > 1 && queueTags[0] === rep.queueTag) {
-        // Reported once, from the first queue tag, instead of once per queue.
+      if (queueTags.length > 1 && !multiQueue.has(contact.id)) {
+        // Reported once per contact, by the first audited rep whose queue holds it,
+        // whatever order the tags come back in and whoever owns the other queue.
+        multiQueue.add(contact.id);
         add({ check: "multiple-queues", severity: "ERROR", repId: rep.id, contactId: contact.id, message: `in ${queueTags.length} queues at once: ${queueTags.join(", ")}` });
       }
     }
 
     if (rep.active && verified) {
       const owned = await searchAll(port, { assignedTo: rep.ghlUserId });
-      for (const contact of owned) {
+      const ownedIds = new Set(owned.map((c) => c.id));
+      const expected = queue.filter((c) => c.assignedTo === rep.ghlUserId).map((c) => c.id);
+      const missed = expected.filter((id) => !ownedIds.has(id));
+      if (missed.length) {
+        verified = false;
+        add({ check: "control", severity: "ERROR", repId: rep.id, message: `the owner search missed ${missed.length} of the ${expected.length} queued contacts assigned to ${rep.name} (${missed.join(", ")}): the assignedTo search is broken, so no ghost list can be trusted` });
+      } else if (expected.length) {
+        ownerChecked = true;
+      } else {
+        ownerUnchecked.push(rep);
+      }
+      for (const contact of missed.length ? [] : owned) {
         const inAQueue = contact.tags.some((t) => t.startsWith(options.queueTagPrefix));
         const isProtected = contact.tags.some((t) => options.protectedTags.includes(t));
         if (!inAQueue && !isProtected) {
@@ -134,19 +161,32 @@ export async function audit(port: AuditPort, reps: Rep[], options: AuditOptions 
       }
     }
 
+    audited.set(rep.id, { verified, queueSize: queue.length });
+  }
+
+  // A rep with nothing of their own to check the owner search against can lean on
+  // another rep's check (same filter shape). With no check anywhere, their ghost
+  // list is unproven.
+  if (!ownerChecked) {
+    for (const rep of ownerUnchecked) {
+      audited.get(rep.id)!.verified = false;
+      add({ check: "control", severity: "WARN", repId: rep.id, message: "no queued contact is assigned to this rep, and no other rep's owner search could be checked: the ghost list is unproven" });
+    }
+  }
+
+  const summaries: RepSummary[] = reps.map((rep) => {
     const mine = findings.filter((f) => f.repId === rep.id);
-    summaries.push({
+    const { verified, queueSize } = audited.get(rep.id)!;
+    return {
       repId: rep.id,
       name: rep.name,
       active: rep.active,
-      verified,
-      queueSize: queue.length,
+      verified: verified && controlled,
+      queueSize,
       errors: mine.filter((f) => f.severity === "ERROR").length,
       warnings: mine.filter((f) => f.severity === "WARN").length,
-    });
-  }
-
-  if (!controlled) for (const summary of summaries) summary.verified = false;
-  const status = summaries.some((s) => !s.verified) ? "unverified" : findings.length ? "findings" : "clean";
+    };
+  });
+  const status = !controlled || reps.length === 0 || summaries.some((s) => !s.verified) ? "unverified" : findings.length ? "findings" : "clean";
   return { status, controlled, reps: summaries, findings };
 }

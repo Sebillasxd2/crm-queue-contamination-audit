@@ -69,6 +69,62 @@ test("a broken search is caught by the control instead of reading as a clean aud
   assert.equal(report.reps[0]?.verified, false);
 });
 
+test("a broken owner search is caught too: the tag search working does not make 'no ghosts' true", async () => {
+  const withGhost: LocationData = { ...cleanLocation, contacts: [...cleanLocation.contacts, { id: "ct_g99", tags: ["newsletter"], assignedTo: avery.ghlUserId }] };
+  assert.deepEqual(brief((await audit(new FakeLocation(withGhost), [avery])).findings), ["WARN possible-ghost rep_avery/ct_g99"]);
+
+  const broken = new FakeLocation(withGhost);
+  broken.brokenSearch = "owner";
+  const report = await audit(broken, [avery]);
+  assert.equal(report.status, "unverified");
+  assert.equal(report.controlled, true, "the tag control passes: it only checks the tag shape");
+  assert.deepEqual(brief(report.findings), ["ERROR control rep_avery"]);
+  assert.match(report.findings[0]?.message ?? "", /owner search missed 5 of the 5/);
+});
+
+test("a rep whose owner search has nothing to be checked against is unverified, unless another rep's was checked", async () => {
+  const base: LocationData = {
+    tags: ["dialer-queue-avery", "dialer-queue-jordan", "audit-control"],
+    workflows: [
+      { id: "wf_demo_0001", name: "Dialer Queue - Avery", status: "published" },
+      { id: "wf_demo_0002", name: "Dialer Queue - Jordan", status: "published" },
+    ],
+    contacts: [{ id: "ct_x01", tags: ["audit-control"] }],
+  };
+  const alone = await audit(new FakeLocation(base), [avery]);
+  assert.equal(alone.status, "unverified");
+  assert.deepEqual(brief(alone.findings), ["WARN control rep_avery"]);
+
+  const withJordan = { ...base, contacts: [...base.contacts, { id: "ct_j01", tags: ["dialer-queue-jordan"], assignedTo: jordan.ghlUserId, clientKey: "prairie" }] };
+  const report = await audit(new FakeLocation(withJordan), [avery, jordan]);
+  assert.equal(report.status, "clean", "Jordan's check proves the owner filter shape for Avery too");
+});
+
+test("multiple-queues does not depend on the order the tags come back in", async () => {
+  const verdict = async (tags: string[]) => {
+    const data: LocationData = {
+      tags: ["dialer-queue-avery", "dialer-queue-casey", "audit-control"],
+      workflows: [{ id: "wf_demo_0001", name: "Dialer Queue - Avery", status: "published" }],
+      contacts: [{ id: "ct_m01", tags, assignedTo: avery.ghlUserId }, { id: "ct_x01", tags: ["audit-control"] }],
+    };
+    return brief((await audit(new FakeLocation(data), [avery])).findings);
+  };
+  const expected = ["ERROR multiple-queues rep_avery/ct_m01"];
+  assert.deepEqual(await verdict(["dialer-queue-avery", "dialer-queue-casey"]), expected);
+  assert.deepEqual(await verdict(["dialer-queue-casey", "dialer-queue-avery"]), expected, "the other queue tag first");
+  assert.deepEqual(await verdict(["dialer-queue-gone", "dialer-queue-avery"]), expected, "an orphan queue tag first");
+});
+
+test("an empty roster reads nothing and is never clean, and a failed control is unverified whatever else was found", async () => {
+  const empty = await audit(new FakeLocation(cleanLocation), []);
+  assert.equal(empty.status, "unverified");
+  assert.deepEqual(brief(empty.findings), ["ERROR control *"]);
+
+  const broken = new FakeLocation(cleanLocation);
+  broken.brokenSearch = true;
+  assert.equal((await audit(broken, [])).status, "unverified");
+});
+
 test("without a control tag the audit never says clean", async () => {
   const report = await audit(new FakeLocation(cleanLocation), [avery], { ...DEFAULT_OPTIONS, controlTag: undefined });
   assert.equal(report.status, "unverified");

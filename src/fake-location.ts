@@ -8,12 +8,13 @@ export interface LocationData {
 
 /**
  * In-memory location for the audit. Search pages by cursor and can serve pages
- * shorter than a full page. `brokenSearch` makes every search come back empty,
- * the way a wrong filter shape or a renamed field does on a real API: the case the
- * control tag exists to catch.
+ * shorter than a full page. `brokenSearch` makes searches come back empty, the way
+ * a wrong filter shape or a renamed field does on a real API: `true` breaks both
+ * shapes, `"tag"` or `"owner"` only one, since the two are different field and
+ * operator pairs and one can be wrong while the other works.
  */
 export class FakeLocation implements AuditPort {
-  brokenSearch = false;
+  brokenSearch: boolean | "tag" | "owner" = false;
   readonly searches: SearchFilter[] = [];
   private readonly data: LocationData;
   private readonly pageSize: number;
@@ -33,7 +34,7 @@ export class FakeLocation implements AuditPort {
 
   async searchContacts(filter: SearchFilter, searchAfter?: unknown[]): Promise<ContactPage> {
     this.searches.push(filter);
-    if (this.brokenSearch) return { contacts: [] };
+    if (this.brokenSearch === true || this.brokenSearch === ("tag" in filter ? "tag" : "owner")) return { contacts: [] };
     const after = typeof searchAfter?.[0] === "string" ? searchAfter[0] : "";
     const matches = this.data.contacts
       .filter((c) => ("tag" in filter ? c.tags.includes(filter.tag) : c.assignedTo === filter.assignedTo))

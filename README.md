@@ -8,7 +8,7 @@ Each rep dials from a queue: contacts carrying the rep's queue tag, assigned to 
 
 ## The traps nobody documents
 
-1. **Zero is not clean until something proves the search works.** A search with the wrong filter shape, a renamed field or a misspelled tag returns nothing, the same nothing a clean queue returns. The audit pairs its searches with controls: a tag kept on at least one known contact must be found (otherwise the whole audit is `unverified`), and a rep whose queue tag does not exist in the location is `unverified` too. Without a control tag configured, the audit does not report `clean`. A test breaks the search on purpose and checks that the result is `unverified`, not clean.
+1. **Zero is not clean until something proves the search works.** A search with the wrong filter shape, a renamed field or a misspelled tag returns nothing, the same nothing a clean queue returns. The audit pairs each search shape with its own control. The tag search: a tag kept on at least one known contact must be found, otherwise the whole audit is `unverified`. The owner search, which the ghost check rests on: every queued contact the tag search already showed as assigned to a rep must come back when searching by that rep, otherwise that rep is `unverified`. A rep whose queue tag does not exist in the location is `unverified` too, and so is an empty roster, which reads nothing. Without a control tag configured, the audit does not report `clean`. Tests break each search shape on purpose and check that the result is `unverified`, not clean.
 2. **Tag and owner can disagree.** A rep restricted to assigned contacts only sees contacts assigned to them. A contact tagged for one rep but owned by another, or by nobody, is in one rep's workflow and on someone else's screen, or nobody's.
 3. **People leave; their contacts stay.** A departed rep's contacts keep their owner and tag, show up in colleagues' queues, and the departed rep's workflow stays published. The audit flags contacts owned by an inactive rep, an inactive rep who still has a queue, and a still-published workflow.
 4. **Leads cross clients.** When a rep moves to another client, or two queues share a load, a lead loaded for one client ends up in a queue dialing for another. The audit compares the client key stored on the contact with the rep's current client.
@@ -22,17 +22,17 @@ Each rep dials from a queue: contacts carrying the rep's queue tag, assigned to 
 
 | check | severity | means |
 |---|---|---|
-| `control` | ERROR / WARN | the control search found nobody, a queue tag does not exist, or no control is configured |
+| `control` | ERROR / WARN | the control search found nobody, the owner search missed contacts it should return or had nothing to be checked against, a queue tag does not exist, the roster is empty, or no control is configured |
 | `workflow` | ERROR / WARN | the rep's workflow is missing, ambiguous, or not published |
 | `inactive-owner` | ERROR | a queued contact is owned by a rep who left |
 | `wrong-owner` | ERROR | a queued contact is owned by another rep or an unknown user |
 | `other-client` | ERROR | a lead loaded for another client |
-| `multiple-queues` | ERROR | a contact with more than one queue tag |
+| `multiple-queues` | ERROR | a contact with more than one queue tag, reported once per contact |
 | `offboarding` | ERROR / WARN | an inactive rep still has a queue, or a published workflow |
 | `no-owner` | WARN | queued with no owner: invisible to a restricted rep |
 | `possible-ghost` | WARN | owned, no queue tag, not protected (`booked`, `customer`) |
 
-Status: `clean`, `findings`, or `unverified`. `unverified` wins over `findings`: what was found is real, but the list may be incomplete.
+Status: `clean`, `findings`, or `unverified`. `unverified` wins over `findings`: what was found is real, but the list may be incomplete. A failed control or an empty roster is always `unverified`.
 
 ## Run it
 
@@ -73,7 +73,7 @@ The fixture ([fixtures/location.json](fixtures/location.json), [fixtures/reps.js
 
 - **Enrollment.** Today ghosts are reported as possible: the public API does not say which workflow a contact is enrolled in. To confirm in the call queue itself.
 - **Client key.** Today it is read from a contact custom field (`CLIENT_FIELD_ID`) that the loader fills. To confirm: that your loads write it; contacts without it are not checked for `other-client`.
-- **Search filter shape.** Today the adapter sends `{ field: "tags", operator: "contains", value }` and `{ field: "assignedTo", operator: "eq", value }`, as I read the public Search Contacts docs. The control search is what tells you if they are wrong for your account.
+- **Search filter shape.** Today the adapter sends `{ field: "tags", operator: "contains", value }` and `{ field: "assignedTo", operator: "eq", value }`, as I read the public Search Contacts docs. The control tag tells you if the tag shape is wrong for your account, and the owner check tells you if the owner shape is.
 - **Roster.** Today who is active comes from the local `reps` table, not from the CRM's user list. To confirm it is kept current when people leave.
 
 ---
